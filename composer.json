@@ -1,5 +1,5 @@
 {
-    "name": "symfony/yaml",
+    "name": "nandohenrique/yaml",
     "type": "library",
     "description": "Symfony Yaml Component",
     "keywords": [],
