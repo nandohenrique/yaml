@@ -583,19 +583,6 @@ class Inline
                         }
 
                         return;
-                    case 0 === strpos($scalar, '!php/const:'):
-                        if (self::$constantSupport) {
-                            if (defined($const = substr($scalar, 11))) {
-                                return constant($const);
-                            }
-
-                            throw new ParseException(sprintf('The constant "%s" is not defined.', $const));
-                        }
-                        if (self::$exceptionOnInvalidType) {
-                            throw new ParseException(sprintf('The string "%s" could not be parsed as a constant. Have you forgotten to pass the "Yaml::PARSE_CONSTANT" flag to the parser?', $scalar));
-                        }
-
-                        return;
                     case 0 === strpos($scalar, '!!float '):
                         return (float) substr($scalar, 8);
                     case preg_match('{^[+-]?[0-9][0-9_]*$}', $scalar):
@@ -643,8 +630,43 @@ class Inline
                         return $time;
                 }
             default:
+                if (self::$constantSupport) {
+                    return self::_replaceConstants($scalar);
+                }
+                if (self::$exceptionOnInvalidType) {
+                    throw new ParseException(sprintf('The string "%s" could not be parsed as a constant. Have you forgotten to pass the "Yaml::PARSE_CONSTANT" flag to the parser?', $scalar));
+                }
                 return (string) $scalar;
         }
+    }
+
+     /**
+     * Replace any constants referenced in a string with their values
+     *
+     * @param  string $value
+     * @return string
+     */
+    protected static function _replaceConstants($value)
+    {
+        foreach (self::_getConstants() as $constant) {
+            if (strstr($value, $constant)) {
+                $value = str_replace($constant, constant($constant), $value);
+                $value = preg_replace('/\s+/', '', $value);
+            }
+        }
+        return $value;
+    }
+
+    /**
+     * Get (reverse) sorted list of defined constant names
+     *
+     * @return array
+     */
+    protected static function _getConstants()
+    {
+        $constants = array_keys(get_defined_constants());
+        rsort($constants, SORT_STRING);
+        return $constants;
     }
 
     /**
